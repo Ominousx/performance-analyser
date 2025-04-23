@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Performance Analyser</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #1c1c1e;
+                color: white;
+                padding: 20px;
+            }
+            select,
+            label {
+                margin: 10px 0;
+                display: block;
+            }
+            canvas {
+                background: white;
+                border-radius: 8px;
+                margin-top: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Performance Analyser</h1>
+        <label for="playerSelect">Select Player:</label>
+        <select id="playerSelect"></select>
+
+        <canvas id="performanceChart" width="800" height="400"></canvas>
+
+        <script>
+            const SHEET_CSV_URL =
+                "https://docs.google.com/spreadsheets/d/1fcU1UBeS_7UnmMOJGVZTufRAlLnc1IxfSvHLnQZvfD0/export?format=csv";
+
+            let chart;
+            let allData = [];
+
+            function updateChart(player) {
+                const playerData = allData.filter(
+                    (row) => row.Player && row.Player.trim() === player,
+                );
+                const sorted = playerData.sort(
+                    (a, b) => new Date(a.Date) - new Date(b.Date),
+                );
+
+                const labels = sorted.map((row) => row.Date);
+                const values = sorted.map((row) => parseFloat(row["ACS"]));
+
+                const pointBackgroundColors = values.map((val, i, arr) => {
+                    if (i === 0) return "#4cff4c";
+                    const drop = arr[i - 1] && val < arr[i - 1] * 0.8;
+                    return drop ? "#ff4c4c" : "#4cff4c";
+                });
+
+                if (chart) chart.destroy();
+
+                const average =
+                    values.reduce((sum, val) => sum + val, 0) / values.length;
+                const stdDev = Math.sqrt(
+                    values.reduce(
+                        (acc, val) => acc + Math.pow(val - average, 2),
+                        0,
+                    ) / values.length,
+                );
+                const averageLine = new Array(values.length).fill(average);
+
+                chart = new Chart(
+                    document
+                        .getElementById("performanceChart")
+                        .getContext("2d"),
+                    {
+                        type: "line",
+                        data: {
+                            labels,
+                            datasets: [
+                                {
+                                    label: `${player} - ACS`,
+                                    data: values,
+                                    borderColor: "#4cff4c",
+                                    backgroundColor: "rgba(76, 255, 76, 0.1)",
+                                    tension: 0.3,
+                                    pointRadius: 5,
+                                    pointHoverRadius: 6,
+                                    pointBackgroundColor: pointBackgroundColors,
+                                },
+                                {
+                                    label: "Upper Bound (Avg + SD)",
+                                    data: values.map(() => average + stdDev),
+                                    borderColor: "#ffaa00",
+                                    borderDash: [5, 5],
+                                    fill: "-1",
+                                },
+                                {
+                                    label: "Lower Bound (Avg - SD)",
+                                    data: values.map(() => average - stdDev),
+                                    borderColor: "#ffaa00",
+                                    borderDash: [5, 5],
+                                    fill: true,
+                                    backgroundColor: "rgba(255, 170, 0, 0.1)",
+                                },
+                                {
+                                    label: `${player} - ACS`,
+                                    data: values,
+                                    borderColor: "#4cff4c",
+                                    backgroundColor: "rgba(76, 255, 76, 0.1)",
+                                    tension: 0.3,
+                                    pointRadius: 5,
+                                    pointHoverRadius: 6,
+                                    pointBackgroundColor: pointBackgroundColors,
+                                },
+                            ],
+                        },
+                        options: {
+                            scales: {
+                                x: { title: { display: true, text: "Date" } },
+                                y: {
+                                    title: { display: true, text: "ACS" },
+                                    beginAtZero: true,
+                                },
+                            },
+                            plugins: {
+                                legend: { labels: { color: "black" } },
+                            },
+                        },
+                    },
+                );
+            }
+
+            function initSelectors(data) {
+                const players = [
+                    ...new Set(
+                        data
+                            .map((row) => row.Player)
+                            .filter((p) => p && p.trim() !== ""),
+                    ),
+                ];
+                const playerSelect = document.getElementById("playerSelect");
+                playerSelect.innerHTML = players
+                    .map((p) => `<option value="${p}">${p}</option>`)
+                    .join("");
+
+                if (players.length === 0) {
+                    document.getElementById("performanceChart").style.display =
+                        "none";
+                    return;
+                }
+
+                playerSelect.addEventListener("change", () => {
+                    updateChart(playerSelect.value);
+                });
+
+                updateChart(players[0]);
+            }
+
+            Papa.parse(SHEET_CSV_URL, {
+                download: true,
+                header: true,
+                complete: function (results) {
+                    allData = results.data.filter(
+                        (row) => row.Player && row.Date && row.ACS,
+                    );
+                    initSelectors(allData);
+                },
+            });
+        </script>
+    </body>
+</html>
