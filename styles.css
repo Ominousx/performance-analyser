@@ -96,3 +96,35 @@ canvas {
 #loadingSpinner {
     display: block; /* Show at start, hide later in JS */
 }
+
+/* Player Table Styling */
+#playerTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 30px;
+}
+
+#playerTable th,
+#playerTable td {
+    border: 1px solid #333;
+    padding: 10px;
+    text-align: left;
+    color: #e0e0e0;
+}
+
+#playerTable th {
+    background-color: #1e1e1e;
+}
+
+#playerTable tr:nth-child(even) {
+    background-color: #1a1a1a;
+}
+
+#playerTable img.player-img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-right: 10px;
+    vertical-align: middle;
+}

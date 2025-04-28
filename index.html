@@ -5,27 +5,84 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Performance Analyser</title>
 
+        <!-- Font -->
         <link
             href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
             rel="stylesheet"
         />
+
+        <!-- External CSS -->
         <link rel="stylesheet" href="styles.css" />
 
+        <!-- Chart.js and PapaParse -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     </head>
 
     <body>
+        <!-- Loading spinner -->
         <div id="loadingSpinner" class="spinner"></div>
 
+        <!-- Main Content -->
         <h1>Performance Analyser</h1>
         <label for="playerSelect">Select Player:</label>
         <select id="playerSelect"></select>
 
-        <div class="chart-container">
+        <!-- Chart Wrapper -->
+        <div id="chartWrapper" class="chart-container" style="opacity: 0">
             <canvas id="performanceChart" width="800" height="400"></canvas>
         </div>
 
+        <!-- Player Table -->
+        <h2>Player ACS Summary</h2>
+
+        <table id="playerTable">
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>ACS</th>
+                    <th>Std Dev</th>
+                    <th>CV (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Will be filled by JavaScript -->
+            </tbody>
+        </table>
+
+        <!-- Explanation Section -->
+        <div class="table-explanation">
+            <h3>Understanding the Table</h3>
+            <ul>
+                <li>
+                    <strong>ACS</strong> = Average Combat Score. Higher is
+                    generally better.
+                </li>
+                <li>
+                    <strong>Std Dev</strong> = Standard Deviation. Lower means
+                    more consistent game-to-game performance.
+                </li>
+                <li>
+                    <strong>CV (%)</strong> = Coefficient of Variation. Lower CV
+                    means the player is more consistent relative to their
+                    average.
+                </li>
+            </ul>
+            <p><strong>Notes:</strong></p>
+            <ul>
+                <li>
+                    <strong>Yui</strong> is a flex player (plays multiple
+                    agents). Higher Std Dev is natural due to different roles
+                    each match.
+                </li>
+                <li>
+                    <strong>Juicy</strong> is a Duelist. Duelists can have
+                    bigger form swings (one bad game impacts ACS heavily).
+                </li>
+            </ul>
+        </div>
+
+        <!-- Scripts -->
         <script>
             const SHEET_CSV_URL =
                 "https://docs.google.com/spreadsheets/d/1fcU1UBeS_7UnmMOJGVZTufRAlLnc1IxfSvHLnQZvfD0/export?format=csv";
@@ -82,30 +139,22 @@
                                     pointBackgroundColor: pointBackgroundColors,
                                 },
                                 {
-                                    label: "Upper Bound (Avg + SD)",
+                                    label: "",
                                     data: values.map(() => average + stdDev),
                                     borderColor: "#ffaa00",
                                     borderDash: [5, 5],
-                                    fill: "-1",
-                                    // NEW!
+                                    fill: false,
                                     pointRadius: 0,
                                     borderWidth: 1,
-                                    datalabels: { display: false },
-                                    legend: { display: false },
                                 },
                                 {
-                                    label: "Lower Bound (Avg - SD)",
+                                    label: "",
                                     data: values.map(() => average - stdDev),
                                     borderColor: "#ffaa00",
                                     borderDash: [5, 5],
-                                    fill: true,
-                                    backgroundColor: "rgba(255, 170, 0, 0.1)",
-                                    // NEW!
+                                    fill: false,
                                     pointRadius: 0,
                                     borderWidth: 1,
-                                    datalabels: { display: false },
-                                    // Hide from legend
-                                    legend: { display: false },
                                 },
                             ],
                         },
@@ -145,6 +194,65 @@
                         },
                     },
                 );
+
+                // Fade in the chart after drawing
+                setTimeout(() => {
+                    const wrapper = document.getElementById("chartWrapper");
+                    wrapper.style.transition = "opacity 1s ease";
+                    wrapper.style.opacity = "1";
+                }, 100);
+            }
+
+            function createPlayerTable(data) {
+                const tableBody = document.querySelector("#playerTable tbody");
+                tableBody.innerHTML = "";
+
+                const players = [
+                    ...new Set(
+                        data
+                            .map((row) => row.Player)
+                            .filter((p) => p && p.trim() !== ""),
+                    ),
+                ];
+
+                players.forEach((player) => {
+                    const playerData = data.filter(
+                        (row) => row.Player.trim() === player,
+                    );
+                    const acsValues = playerData
+                        .map((row) => parseFloat(row["ACS"]))
+                        .filter((v) => !isNaN(v));
+                    const averageACS =
+                        acsValues.reduce((sum, val) => sum + val, 0) /
+                        acsValues.length;
+
+                    const variance =
+                        acsValues.reduce(
+                            (acc, val) => acc + Math.pow(val - averageACS, 2),
+                            0,
+                        ) / acsValues.length;
+                    const stdDev = Math.sqrt(variance);
+
+                    const cv = (stdDev / averageACS) * 100; // Coefficient of Variation in %
+
+                    const imgName =
+                        player.toLowerCase().replace(/\s+/g, "") + ".png";
+
+                    const cvColor =
+                        cv < 20 ? "#4cff4c" : cv < 30 ? "#ffcc00" : "#ff4c4c";
+
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+          <td>
+            <img src="pics/${imgName}" alt="${player}" class="player-img" />
+            ${player}
+          </td>
+          <td>${averageACS.toFixed(1)}</td>
+          <td>${stdDev.toFixed(1)}</td>
+          <td style="color: ${cvColor}; font-weight: bold;">${cv.toFixed(1)}%</td>
+        `;
+                    tableBody.appendChild(row);
+                });
             }
 
             function initSelectors(data) {
@@ -178,11 +286,12 @@
                 header: true,
                 complete: function (results) {
                     document.getElementById("loadingSpinner").style.display =
-                        "none"; // hide spinner
+                        "none";
                     allData = results.data.filter(
                         (row) => row.Player && row.Date && row.ACS,
                     );
                     initSelectors(allData);
+                    createPlayerTable(allData);
                 },
             });
         </script>
