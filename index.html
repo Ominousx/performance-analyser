@@ -4,33 +4,27 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Performance Analyser</title>
+
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="styles.css" />
+
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                background: #1c1c1e;
-                color: white;
-                padding: 20px;
-            }
-            select,
-            label {
-                margin: 10px 0;
-                display: block;
-            }
-            canvas {
-                background: white;
-                border-radius: 8px;
-                margin-top: 20px;
-            }
-        </style>
     </head>
+
     <body>
+        <div id="loadingSpinner" class="spinner"></div>
+
         <h1>Performance Analyser</h1>
         <label for="playerSelect">Select Player:</label>
         <select id="playerSelect"></select>
 
-        <canvas id="performanceChart" width="800" height="400"></canvas>
+        <div class="chart-container">
+            <canvas id="performanceChart" width="800" height="400"></canvas>
+        </div>
 
         <script>
             const SHEET_CSV_URL =
@@ -57,6 +51,7 @@
                 });
 
                 if (chart) chart.destroy();
+                if (values.length === 0) return;
 
                 const average =
                     values.reduce((sum, val) => sum + val, 0) / values.length;
@@ -66,7 +61,6 @@
                         0,
                     ) / values.length,
                 );
-                const averageLine = new Array(values.length).fill(average);
 
                 chart = new Chart(
                     document
@@ -84,7 +78,7 @@
                                     backgroundColor: "rgba(76, 255, 76, 0.1)",
                                     tension: 0.3,
                                     pointRadius: 5,
-                                    pointHoverRadius: 6,
+                                    pointHoverRadius: 7,
                                     pointBackgroundColor: pointBackgroundColors,
                                 },
                                 {
@@ -93,6 +87,11 @@
                                     borderColor: "#ffaa00",
                                     borderDash: [5, 5],
                                     fill: "-1",
+                                    // NEW!
+                                    pointRadius: 0,
+                                    borderWidth: 1,
+                                    datalabels: { display: false },
+                                    legend: { display: false },
                                 },
                                 {
                                     label: "Lower Bound (Avg - SD)",
@@ -101,29 +100,47 @@
                                     borderDash: [5, 5],
                                     fill: true,
                                     backgroundColor: "rgba(255, 170, 0, 0.1)",
-                                },
-                                {
-                                    label: `${player} - ACS`,
-                                    data: values,
-                                    borderColor: "#4cff4c",
-                                    backgroundColor: "rgba(76, 255, 76, 0.1)",
-                                    tension: 0.3,
-                                    pointRadius: 5,
-                                    pointHoverRadius: 6,
-                                    pointBackgroundColor: pointBackgroundColors,
+                                    // NEW!
+                                    pointRadius: 0,
+                                    borderWidth: 1,
+                                    datalabels: { display: false },
+                                    // Hide from legend
+                                    legend: { display: false },
                                 },
                             ],
                         },
                         options: {
                             scales: {
-                                x: { title: { display: true, text: "Date" } },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: "Date",
+                                        color: "#e0e0e0",
+                                    },
+                                    ticks: { color: "#e0e0e0" },
+                                    grid: { color: "#333" },
+                                },
                                 y: {
-                                    title: { display: true, text: "ACS" },
+                                    title: {
+                                        display: true,
+                                        text: "ACS",
+                                        color: "#e0e0e0",
+                                    },
+                                    ticks: { color: "#e0e0e0" },
+                                    grid: { color: "#333" },
                                     beginAtZero: true,
                                 },
                             },
                             plugins: {
-                                legend: { labels: { color: "black" } },
+                                legend: { labels: { color: "#e0e0e0" } },
+                                tooltip: { backgroundColor: "#333" },
+                            },
+                            layout: {
+                                padding: 20,
+                            },
+                            animation: {
+                                duration: 1000,
+                                easing: "easeOutQuart",
                             },
                         },
                     },
@@ -160,6 +177,8 @@
                 download: true,
                 header: true,
                 complete: function (results) {
+                    document.getElementById("loadingSpinner").style.display =
+                        "none"; // hide spinner
                     allData = results.data.filter(
                         (row) => row.Player && row.Date && row.ACS,
                     );
