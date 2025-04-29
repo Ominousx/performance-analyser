@@ -34,7 +34,7 @@ select {
     padding: 10px;
     border-radius: 6px;
     font-size: 1rem;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     width: 250px;
     outline: none;
 }
@@ -42,6 +42,20 @@ select {
 /* Dropdown hover */
 select:hover {
     background-color: #2c2c2e;
+}
+
+/* Streak Counter */
+#streakCounter {
+    font-size: 1.1rem;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    background-color: #1e1e1e;
+    padding: 12px 15px;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #4cff4c;
+    box-shadow: 0 0 10px #4cff4c33;
+    width: fit-content;
 }
 
 /* Chart canvas */
@@ -127,4 +141,32 @@ canvas {
     border-radius: 50%;
     margin-right: 10px;
     vertical-align: middle;
+}
+/* Pulsing Animation */
+@keyframes pulseGlow {
+    0% {
+        text-shadow:
+            0 0 5px #4cff4c,
+            0 0 10px #4cff4c,
+            0 0 15px #4cff4c;
+    }
+    50% {
+        text-shadow:
+            0 0 10px #4cff4c,
+            0 0 20px #4cff4c,
+            0 0 30px #4cff4c;
+    }
+    100% {
+        text-shadow:
+            0 0 5px #4cff4c,
+            0 0 10px #4cff4c,
+            0 0 15px #4cff4c;
+    }
+}
+
+/* When streak is active */
+#streakCounter .active-streak {
+    color: #4cff4c;
+    animation: pulseGlow 2s infinite;
+    font-weight: bold;
 }

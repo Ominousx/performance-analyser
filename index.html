@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Performance Analyser</title>
+        <title>Form Analyser</title>
 
         <!-- Font -->
         <link
@@ -28,14 +28,19 @@
         <label for="playerSelect">Select Player:</label>
         <select id="playerSelect"></select>
 
-        <!-- Chart Wrapper -->
+        <!-- Streak Counter -->
+        <p
+            id="streakCounter"
+            style="font-size: 18px; font-weight: bold; margin-top: 10px"
+        ></p>
+
+        <!-- Chart -->
         <div id="chartWrapper" class="chart-container" style="opacity: 0">
             <canvas id="performanceChart" width="800" height="400"></canvas>
         </div>
 
         <!-- Player Table -->
         <h2>Player ACS Summary</h2>
-
         <table id="playerTable">
             <thead>
                 <tr>
@@ -46,254 +51,41 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- Will be filled by JavaScript -->
+                <!-- Table will be filled by JS -->
             </tbody>
         </table>
 
-        <!-- Explanation Section -->
+        <!-- Table Explanation -->
         <div class="table-explanation">
             <h3>Understanding the Table</h3>
             <ul>
                 <li>
                     <strong>ACS</strong> = Average Combat Score. Higher is
-                    generally better.
+                    better.
                 </li>
                 <li>
                     <strong>Std Dev</strong> = Standard Deviation. Lower means
-                    more consistent game-to-game performance.
+                    more consistent performance.
                 </li>
                 <li>
-                    <strong>CV (%)</strong> = Coefficient of Variation. Lower CV
-                    means the player is more consistent relative to their
-                    average.
+                    <strong>CV (%)</strong> = Coefficient of Variation. Lower is
+                    better.
                 </li>
             </ul>
             <p><strong>Notes:</strong></p>
             <ul>
                 <li>
-                    <strong>Yui</strong> is a flex player (plays multiple
-                    agents). Higher Std Dev is natural due to different roles
-                    each match.
+                    <strong>Yui</strong> is a flex player (higher std dev
+                    natural).
                 </li>
                 <li>
-                    <strong>Juicy</strong> is a Duelist. Duelists can have
-                    bigger form swings (one bad game impacts ACS heavily).
+                    <strong>Juicy</strong> is a Duelist (bigger swings
+                    possible).
                 </li>
             </ul>
         </div>
 
-        <!-- Scripts -->
-        <script>
-            const SHEET_CSV_URL =
-                "https://docs.google.com/spreadsheets/d/1fcU1UBeS_7UnmMOJGVZTufRAlLnc1IxfSvHLnQZvfD0/export?format=csv";
-
-            let chart;
-            let allData = [];
-
-            function updateChart(player) {
-                const playerData = allData.filter(
-                    (row) => row.Player && row.Player.trim() === player,
-                );
-                const sorted = playerData.sort(
-                    (a, b) => new Date(a.Date) - new Date(b.Date),
-                );
-
-                const labels = sorted.map((row) => row.Date);
-                const values = sorted.map((row) => parseFloat(row["ACS"]));
-
-                const pointBackgroundColors = values.map((val, i, arr) => {
-                    if (i === 0) return "#4cff4c";
-                    const drop = arr[i - 1] && val < arr[i - 1] * 0.8;
-                    return drop ? "#ff4c4c" : "#4cff4c";
-                });
-
-                if (chart) chart.destroy();
-                if (values.length === 0) return;
-
-                const average =
-                    values.reduce((sum, val) => sum + val, 0) / values.length;
-                const stdDev = Math.sqrt(
-                    values.reduce(
-                        (acc, val) => acc + Math.pow(val - average, 2),
-                        0,
-                    ) / values.length,
-                );
-
-                chart = new Chart(
-                    document
-                        .getElementById("performanceChart")
-                        .getContext("2d"),
-                    {
-                        type: "line",
-                        data: {
-                            labels,
-                            datasets: [
-                                {
-                                    label: `${player} - ACS`,
-                                    data: values,
-                                    borderColor: "#4cff4c",
-                                    backgroundColor: "rgba(76, 255, 76, 0.1)",
-                                    tension: 0.3,
-                                    pointRadius: 5,
-                                    pointHoverRadius: 7,
-                                    pointBackgroundColor: pointBackgroundColors,
-                                },
-                                {
-                                    label: "",
-                                    data: values.map(() => average + stdDev),
-                                    borderColor: "#ffaa00",
-                                    borderDash: [5, 5],
-                                    fill: false,
-                                    pointRadius: 0,
-                                    borderWidth: 1,
-                                },
-                                {
-                                    label: "",
-                                    data: values.map(() => average - stdDev),
-                                    borderColor: "#ffaa00",
-                                    borderDash: [5, 5],
-                                    fill: false,
-                                    pointRadius: 0,
-                                    borderWidth: 1,
-                                },
-                            ],
-                        },
-                        options: {
-                            scales: {
-                                x: {
-                                    title: {
-                                        display: true,
-                                        text: "Date",
-                                        color: "#e0e0e0",
-                                    },
-                                    ticks: { color: "#e0e0e0" },
-                                    grid: { color: "#333" },
-                                },
-                                y: {
-                                    title: {
-                                        display: true,
-                                        text: "ACS",
-                                        color: "#e0e0e0",
-                                    },
-                                    ticks: { color: "#e0e0e0" },
-                                    grid: { color: "#333" },
-                                    beginAtZero: true,
-                                },
-                            },
-                            plugins: {
-                                legend: { labels: { color: "#e0e0e0" } },
-                                tooltip: { backgroundColor: "#333" },
-                            },
-                            layout: {
-                                padding: 20,
-                            },
-                            animation: {
-                                duration: 1000,
-                                easing: "easeOutQuart",
-                            },
-                        },
-                    },
-                );
-
-                // Fade in the chart after drawing
-                setTimeout(() => {
-                    const wrapper = document.getElementById("chartWrapper");
-                    wrapper.style.transition = "opacity 1s ease";
-                    wrapper.style.opacity = "1";
-                }, 100);
-            }
-
-            function createPlayerTable(data) {
-                const tableBody = document.querySelector("#playerTable tbody");
-                tableBody.innerHTML = "";
-
-                const players = [
-                    ...new Set(
-                        data
-                            .map((row) => row.Player)
-                            .filter((p) => p && p.trim() !== ""),
-                    ),
-                ];
-
-                players.forEach((player) => {
-                    const playerData = data.filter(
-                        (row) => row.Player.trim() === player,
-                    );
-                    const acsValues = playerData
-                        .map((row) => parseFloat(row["ACS"]))
-                        .filter((v) => !isNaN(v));
-                    const averageACS =
-                        acsValues.reduce((sum, val) => sum + val, 0) /
-                        acsValues.length;
-
-                    const variance =
-                        acsValues.reduce(
-                            (acc, val) => acc + Math.pow(val - averageACS, 2),
-                            0,
-                        ) / acsValues.length;
-                    const stdDev = Math.sqrt(variance);
-
-                    const cv = (stdDev / averageACS) * 100; // Coefficient of Variation in %
-
-                    const imgName =
-                        player.toLowerCase().replace(/\s+/g, "") + ".png";
-
-                    const cvColor =
-                        cv < 20 ? "#4cff4c" : cv < 30 ? "#ffcc00" : "#ff4c4c";
-
-                    const row = document.createElement("tr");
-                    row.innerHTML = `
-          <td>
-            <img src="pics/${imgName}" alt="${player}" class="player-img" />
-            ${player}
-          </td>
-          <td>${averageACS.toFixed(1)}</td>
-          <td>${stdDev.toFixed(1)}</td>
-          <td style="color: ${cvColor}; font-weight: bold;">${cv.toFixed(1)}%</td>
-        `;
-                    tableBody.appendChild(row);
-                });
-            }
-
-            function initSelectors(data) {
-                const players = [
-                    ...new Set(
-                        data
-                            .map((row) => row.Player)
-                            .filter((p) => p && p.trim() !== ""),
-                    ),
-                ];
-                const playerSelect = document.getElementById("playerSelect");
-                playerSelect.innerHTML = players
-                    .map((p) => `<option value="${p}">${p}</option>`)
-                    .join("");
-
-                if (players.length === 0) {
-                    document.getElementById("performanceChart").style.display =
-                        "none";
-                    return;
-                }
-
-                playerSelect.addEventListener("change", () => {
-                    updateChart(playerSelect.value);
-                });
-
-                updateChart(players[0]);
-            }
-
-            Papa.parse(SHEET_CSV_URL, {
-                download: true,
-                header: true,
-                complete: function (results) {
-                    document.getElementById("loadingSpinner").style.display =
-                        "none";
-                    allData = results.data.filter(
-                        (row) => row.Player && row.Date && row.ACS,
-                    );
-                    initSelectors(allData);
-                    createPlayerTable(allData);
-                },
-            });
-        </script>
+        <!-- Link your external JavaScript file -->
+        <script src="script.js"></script>
     </body>
 </html>
