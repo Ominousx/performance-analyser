@@ -71,7 +71,7 @@ Additional columns like K/D, Agent, or Map can be added but are currently option
 
 ## ✍️ Credits
 
-Built by [@Ominousx](https://github.com/Ominousx) 🎮  
+Built by [@Ominousx](https://github.com/_SushantJha) 🎮  
 For any feedback, feel free to open an issue or connect on Twitter/X: [@Ominousx](https://twitter.com/Ominousx)
 
 ---
